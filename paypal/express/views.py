@@ -52,7 +52,7 @@ class RedirectView(CheckoutSessionMixin, RedirectView):
     # Setting to distinguish if the site has already collected a shipping
     # address.  This is False when redirecting to PayPal straight from the
     # basket page but True when redirecting from checkout.
-    as_payment_method = False
+    as_payment_method = True
 
     def get_redirect_url(self, **kwargs):
         try:
@@ -60,7 +60,8 @@ class RedirectView(CheckoutSessionMixin, RedirectView):
             url = self._get_redirect_url(basket, **kwargs)
         except PayPalError:
             messages.error(
-                self.request, _("An error occurred communicating with PayPal"))
+                self.request, _(
+                    "Error communicating with paypal, please confirm your address and try again.  If that doesn't work call customer service at 562-774-4GKR"))
             if self.as_payment_method:
                 url = reverse('checkout:payment-details')
             else:
@@ -81,13 +82,7 @@ class RedirectView(CheckoutSessionMixin, RedirectView):
                 self.request, _("A shipping method must be specified"))
             return reverse('checkout:shipping-method')
         else:
-            # Transaction successfully registered with PayPal.  Now freeze the
-            # basket so it can't be edited while the customer is on the PayPal
-            # site.
-            basket.freeze()
-
             logger.info("Basket #%s - redirecting to %s", basket.id, url)
-
             return url
 
     def _get_redirect_url(self, basket, **kwargs):
@@ -117,6 +112,7 @@ class RedirectView(CheckoutSessionMixin, RedirectView):
                 params['shipping_methods'] = []
 
         else:
+            preset_code =  self.checkout_session.shipping_method_code()
             shipping_methods = Repository().get_shipping_methods(
                 user=user, basket=basket)
             params['shipping_methods'] = shipping_methods
@@ -145,10 +141,7 @@ class CancelResponseView(RedirectView):
 
     def get(self, request, *args, **kwargs):
         basket = get_object_or_404(Basket, id=kwargs['basket_id'])
-        try:
-          basket.thaw()
-        except:
-          pass
+        basket.thaw()
         logger.info("Payment cancelled (token %s) - basket #%s thawed",
                     request.GET.get('token', '<no token>'), basket.id)
         return super(CancelResponseView, self).get(request, *args, **kwargs)
@@ -218,7 +211,7 @@ class SuccessResponseView(PaymentDetailsView):
     def load_frozen_basket(self, basket_id):
         # Lookup the frozen basket that this txn corresponds to
         try:
-            basket = Basket.objects.get(id=basket_id, status=Basket.FROZEN)
+            basket = Basket.objects.get(id=basket_id)
         except Basket.DoesNotExist:
             return None
 

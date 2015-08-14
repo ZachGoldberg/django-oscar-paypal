@@ -204,7 +204,7 @@ def set_txn(basket, shipping_methods, currency, return_url, cancel_url, update_u
         # Note, we don't include discounts here - they are handled as separate
         # lines - see below
         params['L_PAYMENTREQUEST_0_AMT%d' % index] = _format_currency(
-            line.unit_price_incl_tax)
+            line.unit_price_excl_tax)
         params['L_PAYMENTREQUEST_0_QTY%d' % index] = line.quantity
 
     # If the order has discounts associated with it, the way PayPal suggests
@@ -240,10 +240,6 @@ def set_txn(basket, shipping_methods, currency, return_url, cancel_url, update_u
             -discount['discount'])
         params['L_PAYMENTREQUEST_0_QTY%d' % index] = 1
 
-    # We include tax in the prices rather than separately as that's how it's
-    # done on most British/Australian sites.  Will need to refactor in the
-    # future no doubt.
-
     # Note that the following constraint must be met
     #
     # PAYMENTREQUEST_0_AMT = (
@@ -255,8 +251,10 @@ def set_txn(basket, shipping_methods, currency, return_url, cancel_url, update_u
     # Hence, if tax is to be shown then it has to be aggregated up to the order
     # level.
     params['PAYMENTREQUEST_0_ITEMAMT'] = _format_currency(
-        basket.total_incl_tax)
-    params['PAYMENTREQUEST_0_TAXAMT'] = _format_currency(D('0.00'))
+        basket.total_excl_tax)
+    basket_tax = basket.total_incl_tax - basket.total_excl_tax
+    ship_tax = shipping_method.charge_incl_tax - shipping_method.charge_excl_tax
+    params['PAYMENTREQUEST_0_TAXAMT'] = _format_currency(basket_tax + ship_tax)
 
     # Instant update callback information
     if update_url:
@@ -303,40 +301,13 @@ def set_txn(basket, shipping_methods, currency, return_url, cancel_url, update_u
         params['NOSHIPPING'] = 1
 
     # Shipping charges
-    params['PAYMENTREQUEST_0_SHIPPINGAMT'] = _format_currency(D('0.00'))
-    max_charge = D('0.00')
-    for index, method in enumerate(shipping_methods):
-        is_default = index == 0
-        params['L_SHIPPINGOPTIONISDEFAULT%d' % index] = 'true' if is_default else 'false'
-        if hasattr(method, 'charge_incl_tax'):
-            # Oscar < 0.8
-            charge = method.charge_incl_tax
-        else:
-            cost = method.calculate(basket)
-            charge = cost.incl_tax
-        if charge > max_charge:
-            max_charge = charge
-        if is_default:
-            params['PAYMENTREQUEST_0_SHIPPINGAMT'] = _format_currency(charge)
-            params['PAYMENTREQUEST_0_AMT'] += charge
-        params['L_SHIPPINGOPTIONNAME%d' % index] = six.text_type(method.name)
-        params['L_SHIPPINGOPTIONAMOUNT%d' % index] = _format_currency(charge)
-
-    # Set shipping charge explicitly if it has been passed
-    if shipping_method:
-        if hasattr(shipping_method, 'charge_incl_tax'):
-            # Oscar < 0.8
-            max_charge = charge = shipping_method.charge_incl_tax
-        else:
-            cost = shipping_method.calculate(basket)
-            charge = cost.incl_tax
-        params['PAYMENTREQUEST_0_SHIPPINGAMT'] = _format_currency(charge)
-        params['PAYMENTREQUEST_0_AMT'] += charge
+    params['PAYMENTREQUEST_0_SHIPPINGAMT'] = _format_currency(D(shipping_method.charge_excl_tax))
+    params['PAYMENTREQUEST_0_AMT'] += _format_currency(shipping_method.charge_incl_tax)
 
     # Both the old version (MAXAMT) and the new version (PAYMENT...) are needed
     # here - think it's a problem with the API.
-    params['PAYMENTREQUEST_0_MAXAMT'] = _format_currency(amount + max_charge)
-    params['MAXAMT'] = _format_currency(amount + max_charge)
+    #params['PAYMENTREQUEST_0_MAXAMT'] = params['PAYMENTREQUEST_0_AMT']
+    #params['MAXAMT'] = params['PAYMENTREQUEST_0_AMT']
 
     # Handling set to zero for now - I've never worked on a site that needed a
     # handling charge.
