@@ -18,7 +18,7 @@
             <h4>{% trans "PayPal" %}</h4>
             <p>
                 {% blocktrans with amt=paypal_amount|currency email=paypal_user_email %}
-                    {{ amt }} will be deducted from your PayPal account, registered 
+                    {{ amt }} will be deducted from your PayPal account, registered
                     to email: {{ email }}.
                 {% endblocktrans %}
             </p>
@@ -32,8 +32,8 @@
         {% csrf_token %}
         <input type="hidden" name="payer_id" value="{{ payer_id }}" />
         <input type="hidden" name="token" value="{{ token }}" />
-        <div class="form-actions">
-            <input id='place-order' type="submit" value="{% trans "Place order" %}" class="pull-right btn btn-primary btn-large js-disable-on-click" />
+        <div class="form-actions" style="margin 0 auto; text-align: center">
+            <input id='place-order' style="width: 100%" type="submit" value="{% trans "Place order" %}" class="btn btn-primary btn-large js-disable-on-click" />
         </div>
     </form>
 {% endblock place_order %}

@@ -252,6 +252,7 @@ def set_txn(basket, shipping_methods, currency, return_url, cancel_url, update_u
     # level.
     params['PAYMENTREQUEST_0_ITEMAMT'] = _format_currency(
         basket.total_excl_tax)
+
     basket_tax = basket.total_incl_tax - basket.total_excl_tax
     ship_tax = shipping_method.charge_incl_tax - shipping_method.charge_excl_tax
     params['PAYMENTREQUEST_0_TAXAMT'] = _format_currency(basket_tax + ship_tax)

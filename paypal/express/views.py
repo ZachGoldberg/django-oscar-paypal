@@ -17,7 +17,6 @@ from django.utils.translation import ugettext_lazy as _
 import oscar
 from oscar.apps.payment.exceptions import UnableToTakePayment
 from oscar.core.loading import get_class, get_model
-from oscar.apps.shipping.methods import FixedPrice, NoShippingRequired
 
 from paypal.express.facade import (
     get_paypal_url, fetch_transaction_details, confirm_transaction)
@@ -220,8 +219,7 @@ class SuccessResponseView(PaymentDetailsView):
             basket.strategy = Selector().strategy(self.request)
 
         # Re-apply any offers
-        Applicator().apply(basket, request=self.request)
-
+        Applicator().apply(basket, user=self.request.user, request=self.request)
         return basket
 
     def get_context_data(self, **kwargs):
@@ -351,22 +349,12 @@ class SuccessResponseView(PaymentDetailsView):
         if not basket.is_shipping_required():
             return NoShippingRequired()
 
-        # Instantiate a new FixedPrice shipping method instance
-        charge_incl_tax = D(self.txn.value('PAYMENTREQUEST_0_SHIPPINGAMT'))
+        session_method = super(SuccessResponseView, self).get_shipping_method(
+            basket, shipping_address, **kwargs)
+        if session_method:
+            return session_method
 
-        # Assume no tax for now
-        charge_excl_tax = charge_incl_tax
-        method = FixedPrice(charge_excl_tax, charge_incl_tax)
-        name = self.txn.value('SHIPPINGOPTIONNAME')
-
-        if not name:
-            session_method = super(SuccessResponseView, self).get_shipping_method(
-                basket, shipping_address, **kwargs)
-            if session_method:
-                method.name = session_method.name
-        else:
-            method.name = name
-        return method
+        return None
 
 
 class ShippingOptionsView(View):
