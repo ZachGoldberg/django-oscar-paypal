@@ -13,6 +13,7 @@ class ExpressTransactionAdmin(admin.ModelAdmin):
         'ack',
         'correlation_id',
         'token',
+        'fee',
         'error_code',
         'error_message',
         'raw_request',

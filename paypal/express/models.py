@@ -19,6 +19,9 @@ class ExpressTransaction(base.ResponseModel):
                                  blank=True)
     currency = models.CharField(max_length=8, null=True, blank=True)
 
+    fee = models.DecimalField(max_digits=12, decimal_places=2, null=True,
+                                 blank=True)
+
     # Response params
     SUCCESS, SUCCESS_WITH_WARNING, FAILURE = 'Success', 'SuccessWithWarning', 'Failure'
     ack = models.CharField(max_length=32)

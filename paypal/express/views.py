@@ -310,10 +310,12 @@ class SuccessResponseView(PaymentDetailsView):
         source = Source(source_type=source_type,
                         currency=confirm_txn.currency,
                         amount_allocated=confirm_txn.amount,
-                        amount_debited=confirm_txn.amount)
+                        amount_debited=confirm_txn.amount,
+                        amount_fee=confirm_txn.fee)
         self.add_payment_source(source)
         self.add_payment_event('Settled', confirm_txn.amount,
-                               reference=confirm_txn.correlation_id)
+                               reference=confirm_txn.correlation_id,
+                               fee=confirm_txn.fee)
 
     def get_shipping_address(self, basket):
         """

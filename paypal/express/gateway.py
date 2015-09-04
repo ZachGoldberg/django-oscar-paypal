@@ -103,6 +103,10 @@ def _fetch_response(method, extra_params):
             txn.error_code = pairs['L_ERRORCODE0']
         if 'L_LONGMESSAGE0' in pairs:
             txn.error_message = pairs['L_LONGMESSAGE0']
+
+    if pairs.get('PAYMENTINFO_0_FEEAMT'):
+        txn.fee = pairs.get('PAYMENTINFO_0_FEEAMT')
+
     txn.save()
 
     if not txn.is_successful:
