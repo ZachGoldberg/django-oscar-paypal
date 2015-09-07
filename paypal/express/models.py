@@ -47,4 +47,3 @@ class ExpressTransaction(base.ResponseModel):
     def __str__(self):
         return 'method: %s: token: %s' % (
             self.method, self.token)
-
